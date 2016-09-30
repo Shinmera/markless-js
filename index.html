@@ -14,19 +14,22 @@
       <textarea id="input" autofocus></textarea>
       <section id="output"></section>
     </main>
+    <footer>
+      Took <time id="time-taken">0</time>s to parse.
+    </footer>
     <script type="text/javascript" src="markless.js"></script>
     <script type="text/javascript">
       function setup(){
           var input = document.getElementById('input');
           var output = document.getElementById('output');
+          var timeout = document.getElementById('time-taken');
           var parser = new MarklessParser();
           
           function updateOutput(){
-              var start = new Date().getTime();
+              var start = performance.now();
               parser.parseInto(output, input.value);
-              var end = new Date().getTime();
-              var time = end - start;
-              console.log('Execution time: ' + time);
+              var time = performance.now() - start;
+              timeout.innerHTML = (time/1000).toFixed(4)+"";
           }
           input.addEventListener('input',updateOutput);
       }

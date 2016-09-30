@@ -30,4 +30,6 @@ body>main #output{
     flex-grow: 1;
     border: 1px solid #ccc;
     width: 50%;
+    text-align: justify;
+    overflow: auto;
 }
