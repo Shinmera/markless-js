@@ -1,3 +1,14 @@
+var MarklessDirective_Unknown = function(){
+    var self = this;
+    self.name = "unknown";
+
+    self.maybeParse = function(p){
+        return false;
+    }
+    
+    return self;
+}
+
 var MarklessParser = function(){
     var self = this;
     var dom = window.document;
@@ -15,34 +26,33 @@ var MarklessParser = function(){
     self.globallyDisabledDirectives = [];
 
     // Extension
-    self.addLineDirective = function(name, parseFun){
-        if(typeof name !== "string") throw "Directive name must be a string.";
-        if(typeof parseFun !== "function") throw "Directive parseFun must be a function.";
+    self._prepareDirective = function(prototype){
+        if(typeof prototype !== "function") throw "Directive prototype must be a function.";
+
+        var directive = new prototype();
+        if(typeof directive.name !== "string") throw "Directive name must be a string.";
+        if(typeof directive.maybeParse !== "function") throw "Directive maybeParse must be a function.";
         
-        self.lineDirectives[name] = {
-            "name": name,
-            "maybeParse": parseFun,
-            "isDisabled": function(){
+        if(!directive.isDisabled){
+            directive.isDisabled = function(){
                 return globallyDisabledDirectives.find(function(e){return e === name;})
                     || locallyDisabledDirectives.find(function(a){return a.find(function(e){return e === name;});});
-            }
-        };
-        return self.lineDirectives[name];
+            };
+        }
+        
+        return directive;
+    }
+    
+    self.addLineDirective = function(prototype){
+        var directive = self._prepareDirective(prototype);
+        self.lineDirectives[directive.name] = directive;
+        return directive;
     }
 
-    self.addInlineDirective = function(name, parseFun){
-        if(typeof name !== "string") throw "Directive name must be a string.";
-        if(typeof parseFun !== "function") throw "Directive parseFun must be a function.";
-        
-        self.inlineDirectives[name] = {
-            "name": name,
-            "maybeParse": parseFun,
-            "isDisabled": function(){
-                return globallyDisabledDirectives.find(function(e){return e === name;})
-                    || locallyDisabledDirectives.find(function(a){return a.find(function(e){return e === name;});});
-            }
-        };
-        return self.inlineDirectives[name];
+    self.addInlineDirective = function(prototype){
+        var directive = self._prepareDirective(prototype);
+        self.inlineDirectives[directive.name] = directive;
+        return directive;
     }
 
     self.pushDisabledDirectives = function(directives){
@@ -135,6 +145,7 @@ var MarklessParser = function(){
             || self.maybeParseEndOfLine()
             || self.maybeParseInlineDirective()
             || self.parseCharacter();
+        return document;
     }
 
     self.maybeParseEscape = function(){
@@ -155,7 +166,7 @@ var MarklessParser = function(){
         if(c==0 || source[c-1] == '\n' || document.childNodes.length == 0){
             for(var i=0; i<lineDirectives.length; i++){
                 if(lineDirectives[i].isDisabled() === false
-                   && lineDirectives[i].maybeParse(source)){
+                   && lineDirectives[i].maybeParse(self)){
                     return true;
                 }
             }
@@ -192,4 +203,6 @@ var MarklessParser = function(){
         c++;
         return true;
     }
+
+    return self;
 }
