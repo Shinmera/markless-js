@@ -1,0 +1,33 @@
+html{
+    font-family: sans-serif;
+    font-size: 12pt;
+}
+
+body{
+    margin: 0 auto 0 auto;
+}
+
+body>header{
+    
+}
+
+body>main{
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    min-height: 700px;
+}
+
+body>main #input{
+    display: inline-block;
+    flex-grow: 1;
+    box-sizing: border-box;
+    width: 50%;
+}
+
+body>main #output{
+    display: inline-block;
+    flex-grow: 1;
+    border: 1px solid #ccc;
+    width: 50%;
+}

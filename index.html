@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Markless JS Parser</title>
+    <link rel="stylesheet" type="text/css" href="index.css"/>
+    <meta name="viewport" content="width=device-width"/>
+  </head>
+  <body>
+    <header>
+      <h1>Markless Live Parser</h1>
+    </header>
+    <main>
+      <textarea id="input" autofocus></textarea>
+      <section id="output"></section>
+    </main>
+    <script type="text/javascript" src="markless.js"></script>
+    <script type="text/javascript">
+      function setup(){
+          var input = document.getElementById('input');
+          var output = document.getElementById('output');
+          var parser = new MarklessParser();
+          
+          function updateOutput(){
+              var start = new Date().getTime();
+              parser.parseInto(output, input.value);
+              var end = new Date().getTime();
+              var time = end - start;
+              console.log('Execution time: ' + time);
+          }
+          input.addEventListener('input',updateOutput);
+      }
+      setup();
+    </script>
+  </body>
+</html>
