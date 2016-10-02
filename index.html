@@ -11,7 +11,21 @@
       <h1>Markless Live Parser</h1>
     </header>
     <main>
-      <textarea id="input" autofocus></textarea>
+      <textarea id="input" autofocus># Markless
+This is a demo page to illustrate the workings of the JavaScript Markless implementation.
+Markless is a new ASCII text markup standard that aims to be intuitive, unambiguous, and
+fast.
+
+## Demo
+:: common-lisp
+;; Hah!
+(defun !(!)(if(<= ! 1)!(* !(!(1- !)))))
+::
+
+==
+
+## Other Shit
+! warn Hi</textarea>
       <section id="output"></section>
     </main>
     <footer>
@@ -19,21 +33,19 @@
     </footer>
     <script type="text/javascript" src="markless.js"></script>
     <script type="text/javascript">
-      function setup(){
-          var input = document.getElementById('input');
-          var output = document.getElementById('output');
-          var timeout = document.getElementById('time-taken');
-          var parser = new MarklessParser();
-          
-          function updateOutput(){
-              var start = performance.now();
-              parser.parseInto(output, input.value);
-              var time = performance.now() - start;
-              timeout.innerHTML = (time/1000).toFixed(4)+"";
-          }
-          input.addEventListener('input',updateOutput);
+      var input = document.getElementById('input');
+      var output = document.getElementById('output');
+      var timeout = document.getElementById('time-taken');
+      var parser = new MarklessParser();
+      
+      function updateOutput(){
+          var start = performance.now();
+          parser.parseInto(output, input.value);
+          var time = performance.now() - start;
+          timeout.innerHTML = (time/1000).toFixed(4)+"";
       }
-      setup();
+      input.addEventListener('input',updateOutput);
+      updateOutput();
     </script>
   </body>
 </html>

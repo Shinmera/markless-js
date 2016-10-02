@@ -1,12 +1,11 @@
-var MarklessDirective_Unknown = function(){
-    var self = this;
-    self.name = "unknown";
-
-    self.maybeParse = function(p){
-        return false;
-    }
-    
-    return self;
+if(Object.values === undefined){
+    Object.values = function(obj){
+        var vals = [];
+        for(var key in obj){
+            vals.push(obj[key]);
+        }
+        return vals;
+    };
 }
 
 var MarklessParser = function(){
@@ -35,7 +34,7 @@ var MarklessParser = function(){
         
         if(!directive.isDisabled){
             directive.isDisabled = function(){
-                return globallyDisabledDirectives.find(function(e){return e === name;})
+                return self.globallyDisabledDirectives.find(function(e){return e === name;})
                     || locallyDisabledDirectives.find(function(a){return a.find(function(e){return e === name;});});
             };
         }
@@ -45,14 +44,22 @@ var MarklessParser = function(){
     
     self.addLineDirective = function(prototype){
         var directive = self._prepareDirective(prototype);
-        self.lineDirectives[directive.name] = directive;
+        lineDirectives[directive.name] = directive;
         return directive;
     }
 
     self.addInlineDirective = function(prototype){
         var directive = self._prepareDirective(prototype);
-        self.inlineDirectives[directive.name] = directive;
+        inlineDirectives[directive.name] = directive;
         return directive;
+    }
+
+    self.listLineDirectives = function(){
+        return Object.values(lineDirectives);
+    }
+
+    self.listInlineDirectives = function(){
+        return Object.values(inlineDirectives);
     }
 
     self.pushDisabledDirectives = function(directives){
@@ -82,7 +89,7 @@ var MarklessParser = function(){
 
     self.insertComponent = function(type){
         var comp = self.startComponent(type);
-        self.endComponent();
+        self.endComponent(comp);
         return comp;
     }
 
@@ -102,12 +109,69 @@ var MarklessParser = function(){
         return document;
     }
 
-    self.endComponent = function(){
+    self.endComponent = function(comp){
         self.flushString();
-        if(document.parentNode){
+        if(document === comp){
             document = document.parentNode;
+        }else if(document.parentNode){
+            document = document.parentNode;
+            self.endComponent(comp);
+        }else{
+            throw "Attempted to end component "+comp.tagName+" while it is not open."
         }
         return document;
+    }
+
+    // Lexer
+    self.c = function(newPos){
+        if(newPos !== undefined){
+            c = newPos;
+        }
+        if(c<0) c = 0;
+        else if(source.length<c) c = source.length;
+        return c;
+    }
+
+    self.at = function(pos){
+        pos = (pos === undefined)? c : pos;
+        if(pos<0) return '';
+        else if(source.length<=pos) return '\n';
+        else return source[pos] ;
+    }
+    
+    self.here = function(){
+        return self.at(c);
+    }
+
+    self.next = function(){
+        return self.at(c+1);
+    }
+
+    self.prev = function(){
+        return self.at(c-1);
+    }
+
+    self.advance = function(n){
+        if(n === undefined) n = 1;
+        return (c<source.length)? c+=n : c;
+    }
+
+    self.backtrack = function(){
+        return (0<c)? c-- : c;
+    }
+
+    self.consume = function(){
+        var cur = self.here();
+        self.advance();
+        return cur;
+    }
+
+    self.length = function(){
+        return source.length;
+    }
+
+    self.hasMore = function(p){
+        return (p !== undefined)? p<source.length-1: c<source.length-1;
     }
     
     // Parsing
@@ -130,12 +194,12 @@ var MarklessParser = function(){
 
     self.parse = function(input){
         if(typeof input !== "string") throw "Input to parse must be a string.";
-        
+        var root = document;
         source = input;
         while(c<source.length){
             self.parseOne();
         }
-        self.endComponent();
+        self.endComponent(document);
         return document;
     }
 
@@ -149,13 +213,10 @@ var MarklessParser = function(){
     }
 
     self.maybeParseEscape = function(){
-        if(source[c] === '\\'){
+        if(self.here() === '\\'){
             c++;
-            if(source[c] !== '\n'){
-                if(c<source.length){
-                    self.insertString(source[c]);
-                    c++;
-                }
+            if(self.here() !== '\n'){
+                self.parseCharacter();
                 return true;
             }
         }
@@ -163,9 +224,9 @@ var MarklessParser = function(){
     }
 
     self.maybeParseLineDirective = function(){
-        if(c==0 || source[c-1] == '\n' || document.childNodes.length == 0){
-            for(var i=0; i<lineDirectives.length; i++){
-                if(lineDirectives[i].isDisabled() === false
+        if(c==0 || source[c-1] === '\n' || document.childNodes.length === 0){
+            for(var i in lineDirectives){
+                if(!lineDirectives[i].isDisabled()
                    && lineDirectives[i].maybeParse(self)){
                     return true;
                 }
@@ -175,11 +236,11 @@ var MarklessParser = function(){
     }
 
     self.maybeParseEndOfLine = function(){
-        if(source[c] === '\n'){
+        if(self.here() === '\n'){
             switch(lineMode){
             case "always":    self.insertNewline(); break;
-            case "unescaped": if(0<c && source[c-1] !== '\\') self.insertNewline(); break;
-            case "escaped":   if(0<c && source[c-1] === '\\') self.insertNewline(); break;
+            case "unescaped": if(self.prev() !== '\\') self.insertNewline(); break;
+            case "escaped":   if(self.prev() === '\\') self.insertNewline(); break;
             case "never":     break;
             }
             c++;
@@ -189,8 +250,8 @@ var MarklessParser = function(){
     }
 
     self.maybeParseInlineDirective = function(){
-        for(var i=0; i<inlineDirectives.length; i++){
-            if(inlineDirectives[i].isDisabled() === false
+        for(var i in inlineDirectives){
+            if(!inlineDirectives[i].isDisabled()
                && inlineDirectives[i].maybeParse(self)){
                 return true;
             }
@@ -199,10 +260,171 @@ var MarklessParser = function(){
     }
 
     self.parseCharacter = function(){
-        self.insertString(source[c]);
-        c++;
+        self.insertString(self.consume());
         return true;
     }
 
+    // Default directives
+    self.addLineDirective(MarklessDirective_header);
+    self.addLineDirective(MarklessDirective_horizontal_rule);
+    self.addLineDirective(MarklessDirective_code_block);
+    self.addLineDirective(MarklessDirective_instruction);
+
+    return self;
+}
+
+var MarklessDirective_unknown = function(){
+    var self = this;
+    self.name = "unknown";
+
+    self.maybeParse = function(p){
+        return false;
+    }
+    
+    return self;
+}
+
+var MarklessDirective_header = function(){
+    var self = this;
+    self.name = "header";
+
+    self.maybeParse = function(p){
+        if(p.here() === '#'
+           && (p.next() === '#' || p.next() === ' ')){
+            var level = 0;
+            while(p.consume() === '#'){
+                level++;
+            }
+            if(level>6) level = 6;
+            var comp = p.startComponent("h"+level);
+            while(p.here() !== '\n'){
+                p.maybeParseEscape()
+                    || p.maybeParseInlineDirective()
+                    || p.parseCharacter();
+            }
+            // FIXME: label
+            p.advance();
+            p.endComponent(comp);
+            return true;
+        }
+        return false;
+    }
+    
+    return self;
+}
+
+var MarklessDirective_horizontal_rule = function(){
+    var self = this;
+    self.name = "horizontal-rule";
+
+    self.maybeParse = function(p){
+        if(p.here() === '=' && p.next() === '='){
+            p.insertComponent("hr");
+            while(p.consume() !== '\n');
+            return true;
+        }
+        return false;
+    }
+    
+    return self;
+}
+
+var MarklessDirective_code_block = function(){
+    var self = this;
+    self.name = "code-block";
+
+    self.maybeParse = function(p){
+        if(p.here() === ':' && p.next() === ':'){
+            var colons = 0;
+            var lang = "unknown";
+            var args = "";
+            
+            while(p.here() === ':'){ colons++; p.advance();}
+            // Process Args
+            switch(p.here()){
+            case '\n': p.advance(); break;
+            case ' ': p.advance();
+                lang = "";
+                while(p.here() !== '\n'){
+                    if(p.here() === ' '){
+                        p.advance();
+                        break;
+                    }
+                    lang = lang+p.consume();
+                }
+                while(p.here() !== '\n'){
+                    args = args+p.consume();
+                }
+                p.advance();
+                break;
+            }
+            // Construct body
+            var comp = p.startComponent("pre");
+            comp.setAttribute("data-lang", lang);
+            comp.setAttribute("data-lang-args", args);
+            p.startComponent("code");
+            while(p.hasMore()){
+                var c = p.consume();
+                if(c === '\n'){
+                    var count = 0;
+                    var pos = p.c();
+                    while(p.at(pos) === ':'){count++;pos++;}
+                    if(count === colons){
+                        while(p.consume() !== '\n');
+                        break;
+                    }
+                }
+                p.insertString(c);
+            }
+            p.endComponent(comp);
+            return true;
+        }
+        return false;
+    }
+    
+    return self;
+}
+
+var MarklessDirective_instruction = function(){
+    var self = this;
+    self.name = "instruction";
+
+    self.maybeParse = function(p){
+        if(p.here() === '!' && p.next() === ' '){
+            var instruction = "";
+            var args = "";
+            
+            p.advance(2);
+            while(p.here() !== '\n'){
+                instruction = instruction + p.consume();
+                if(p.here() === ' '){
+                    p.advance();
+                    break;
+                }
+            }
+            while(p.here() !== '\n'){args = args+p.consume();}
+            args = args.split(" ");
+
+            switch(instruction){
+            case "set": break;
+            case "warn": console.log.apply(console, args); break;
+            case "error": throw args; break;
+            case "include": break;
+            case "disable-directives":
+                for(var i=0; i<args.length; i++){
+                    p.globallyDisabledDirectives.push(args[i]);
+                }
+                console.log(p.globallyDisabledDirectives);
+                break;
+            case "enable-directives":
+                p.globallyDisabledDirectives =
+                    p.globallyDisabledDirectives.filter(function(e){
+                        return !args.find(function(f){return e===f;})});
+                break;
+            default: throw "Unknown instruction: "+instruction;
+            }
+        }
+    }
+    
     return self;
 }
