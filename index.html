@@ -25,7 +25,10 @@ fast.
 ==
 
 ## Other Shit
-! warn Hi</textarea>
+! warn Hi
+! disable-directives instruction
+! warn Should not be warned
+; And this doesn't show up at all.</textarea>
       <section id="output"></section>
     </main>
     <footer>
@@ -39,6 +42,7 @@ fast.
       var parser = new MarklessParser();
       
       function updateOutput(){
+          parser.globallyDisabledDirectives = [];
           var start = performance.now();
           parser.parseInto(output, input.value);
           var time = performance.now() - start;

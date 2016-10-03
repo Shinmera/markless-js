@@ -1,3 +1,4 @@
+// Compat.
 if(Object.values === undefined){
     Object.values = function(obj){
         var vals = [];
@@ -6,6 +7,24 @@ if(Object.values === undefined){
         }
         return vals;
     };
+}
+
+var MarklessStandardDirectives = {};
+
+var defineMarklessDirective = function(name, type, init){
+    MarklessStandardDirectives[name] = function(){
+        var self = this;
+        init(self);
+        return self;
+    };
+    MarklessStandardDirectives[name].prototype.type = type;
+    MarklessStandardDirectives[name].prototype.name = name;
+}
+
+var defineSimpleMarklessDirective = function(name, type, maybeParse){
+    defineMarklessDirective(name, type, function(self){
+        self.maybeParse = maybeParse;
+    });
 }
 
 var MarklessParser = function(){
@@ -32,10 +51,10 @@ var MarklessParser = function(){
         if(typeof directive.name !== "string") throw "Directive name must be a string.";
         if(typeof directive.maybeParse !== "function") throw "Directive maybeParse must be a function.";
         
-        if(!directive.isDisabled){
+        if(directive.isDisabled === undefined){
             directive.isDisabled = function(){
-                return self.globallyDisabledDirectives.find(function(e){return e === name;})
-                    || locallyDisabledDirectives.find(function(a){return a.find(function(e){return e === name;});});
+                return self.globallyDisabledDirectives.find(function(e){return e === directive.name;})
+                    || locallyDisabledDirectives.find(function(a){return a.find(function(e){return e === directive.name;});});
             };
         }
         
@@ -265,166 +284,146 @@ var MarklessParser = function(){
     }
 
     // Default directives
-    self.addLineDirective(MarklessDirective_header);
-    self.addLineDirective(MarklessDirective_horizontal_rule);
-    self.addLineDirective(MarklessDirective_code_block);
-    self.addLineDirective(MarklessDirective_instruction);
-
-    return self;
-}
-
-var MarklessDirective_unknown = function(){
-    var self = this;
-    self.name = "unknown";
-
-    self.maybeParse = function(p){
-        return false;
+    for(var name in MarklessStandardDirectives){
+        var directive = MarklessStandardDirectives[name];
+        switch(directive.prototype.type){
+        case "line": self.addLineDirective(directive); break;
+        case "inline": self.addInlineDirective(directive); break;
+        default: throw ["Directive "+name+" has invalid type "+directive.prototype.type,directive]; break;
+        }
     }
     
     return self;
 }
+    
+defineSimpleMarklessDirective("unknown", "line", function(p){
+    return false;
+});
 
-var MarklessDirective_header = function(){
-    var self = this;
-    self.name = "header";
+defineSimpleMarklessDirective("header", "line", function(p){
+    if(p.here() === '#'
+       && (p.next() === '#' || p.next() === ' ')){
+        var level = 0;
+        while(p.consume() === '#'){
+            level++;
+        }
+        if(level>6) level = 6;
+        var comp = p.startComponent("h"+level);
+        while(p.here() !== '\n'){
+            p.maybeParseEscape()
+                || p.maybeParseInlineDirective()
+                || p.parseCharacter();
+        }
+        // FIXME: label
+        p.advance();
+        p.endComponent(comp);
+        return true;
+    }
+    return false;
+});
 
-    self.maybeParse = function(p){
-        if(p.here() === '#'
-           && (p.next() === '#' || p.next() === ' ')){
-            var level = 0;
-            while(p.consume() === '#'){
-                level++;
-            }
-            if(level>6) level = 6;
-            var comp = p.startComponent("h"+level);
+defineSimpleMarklessDirective("horizontal-rule", "line", function(p){
+    if(p.here() === '=' && p.next() === '='){
+        p.insertComponent("hr");
+        while(p.consume() !== '\n');
+        return true;
+    }
+    return false;
+});
+
+defineSimpleMarklessDirective("code-block", "line", function(p){
+    if(p.here() === ':' && p.next() === ':'){
+        var colons = 0;
+        var lang = "unknown";
+        var args = "";
+        
+        while(p.here() === ':'){ colons++; p.advance();}
+        // Process Args
+        switch(p.here()){
+        case '\n': p.advance(); break;
+        case ' ': p.advance();
+            lang = "";
             while(p.here() !== '\n'){
-                p.maybeParseEscape()
-                    || p.maybeParseInlineDirective()
-                    || p.parseCharacter();
-            }
-            // FIXME: label
-            p.advance();
-            p.endComponent(comp);
-            return true;
-        }
-        return false;
-    }
-    
-    return self;
-}
-
-var MarklessDirective_horizontal_rule = function(){
-    var self = this;
-    self.name = "horizontal-rule";
-
-    self.maybeParse = function(p){
-        if(p.here() === '=' && p.next() === '='){
-            p.insertComponent("hr");
-            while(p.consume() !== '\n');
-            return true;
-        }
-        return false;
-    }
-    
-    return self;
-}
-
-var MarklessDirective_code_block = function(){
-    var self = this;
-    self.name = "code-block";
-
-    self.maybeParse = function(p){
-        if(p.here() === ':' && p.next() === ':'){
-            var colons = 0;
-            var lang = "unknown";
-            var args = "";
-            
-            while(p.here() === ':'){ colons++; p.advance();}
-            // Process Args
-            switch(p.here()){
-            case '\n': p.advance(); break;
-            case ' ': p.advance();
-                lang = "";
-                while(p.here() !== '\n'){
-                    if(p.here() === ' '){
-                        p.advance();
-                        break;
-                    }
-                    lang = lang+p.consume();
-                }
-                while(p.here() !== '\n'){
-                    args = args+p.consume();
-                }
-                p.advance();
-                break;
-            }
-            // Construct body
-            var comp = p.startComponent("pre");
-            comp.setAttribute("data-lang", lang);
-            comp.setAttribute("data-lang-args", args);
-            p.startComponent("code");
-            while(p.hasMore()){
-                var c = p.consume();
-                if(c === '\n'){
-                    var count = 0;
-                    var pos = p.c();
-                    while(p.at(pos) === ':'){count++;pos++;}
-                    if(count === colons){
-                        while(p.consume() !== '\n');
-                        break;
-                    }
-                }
-                p.insertString(c);
-            }
-            p.endComponent(comp);
-            return true;
-        }
-        return false;
-    }
-    
-    return self;
-}
-
-var MarklessDirective_instruction = function(){
-    var self = this;
-    self.name = "instruction";
-
-    self.maybeParse = function(p){
-        if(p.here() === '!' && p.next() === ' '){
-            var instruction = "";
-            var args = "";
-            
-            p.advance(2);
-            while(p.here() !== '\n'){
-                instruction = instruction + p.consume();
                 if(p.here() === ' '){
                     p.advance();
                     break;
                 }
+                lang = lang+p.consume();
             }
-            while(p.here() !== '\n'){args = args+p.consume();}
-            args = args.split(" ");
-
-            switch(instruction){
-            case "set": break;
-            case "warn": console.log.apply(console, args); break;
-            case "error": throw args; break;
-            case "include": break;
-            case "disable-directives":
-                for(var i=0; i<args.length; i++){
-                    p.globallyDisabledDirectives.push(args[i]);
+            while(p.here() !== '\n'){
+                args = args+p.consume();
+            }
+            p.advance();
+            break;
+        }
+        // Construct body
+        var comp = p.startComponent("pre");
+        comp.setAttribute("data-lang", lang);
+        comp.setAttribute("data-lang-args", args);
+        p.startComponent("code");
+        while(p.hasMore()){
+            var c = p.consume();
+            if(c === '\n'){
+                var count = 0;
+                var pos = p.c();
+                while(p.at(pos) === ':'){count++;pos++;}
+                if(count === colons){
+                    while(p.consume() !== '\n');
+                    break;
                 }
-                console.log(p.globallyDisabledDirectives);
+            }
+            p.insertString(c);
+        }
+        p.endComponent(comp);
+        return true;
+    }
+    return false;
+});
+
+defineSimpleMarklessDirective("instruction", "line", function(p){
+    if(p.here() === '!' && p.next() === ' '){
+        var instruction = "";
+        var args = "";
+        
+        p.advance(2);
+        while(p.here() !== '\n'){
+            instruction = instruction + p.consume();
+            if(p.here() === ' '){
+                p.advance();
                 break;
-            case "enable-directives":
-                p.globallyDisabledDirectives =
-                    p.globallyDisabledDirectives.filter(function(e){
-                        return !args.find(function(f){return e===f;})});
-                break;
-            default: throw "Unknown instruction: "+instruction;
             }
         }
+        while(p.here() !== '\n'){args = args+p.consume();}
+        p.advance();
+        args = args.split(" ");
+
+        switch(instruction){
+        case "set": break;
+        case "warn": console.log.apply(console, args); break;
+        case "error": throw args; break;
+        case "include": break;
+        case "disable-directives":
+            for(var i=0; i<args.length; i++){
+                if(!p.globallyDisabledDirectives.find(function(e){return e==args[i]}))
+                    p.globallyDisabledDirectives.push(args[i]);
+            }
+            break;
+        case "enable-directives":
+            p.globallyDisabledDirectives =
+                p.globallyDisabledDirectives.filter(function(e){
+                    return !args.find(function(f){return e===f;})});
+            break;
+        default: throw "Unknown instruction: "+instruction;
+        }
+        return true;
     }
-    
-    return self;
-}
+    return false;
+});
+
+defineSimpleMarklessDirective("comment", "line", function(p){
+    if(p.here() === ';' && (p.next() === ';' || p.next() === ' ')){
+        while(p.consume() !== '\n');
+        return true;
+    }
+    return false;
+});
