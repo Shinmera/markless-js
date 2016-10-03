@@ -16,11 +16,20 @@ This is a demo page to illustrate the workings of the JavaScript Markless implem
 Markless is a new ASCII text markup standard that aims to be intuitive, unambiguous, and
 fast.
 
-## Demo
+## Basic Markup
+You can *scream* like usual. Just use \* around your text. If the screaming text has \* in it, either escape it, or use more \*s. **1*1**
+
+If you don't like screaming, you can also simply /italicize/. Works the same as bolding, but with \/s. And just the same is _underlining_. Simply put down some \_s.
+
+In order to avoid clashing with hyphenation --or dashes-- strikethrough is <-unbelievably complicated-> a bit more complex. Just surround the text with \<- foo ->. By the way, dashes are just two hyphens like so: \--
+
+## Code
 :: common-lisp
 ;; Hah!
 (defun !(!)(if(<= ! 1)!(* !(!(1- !)))))
 ::
+
+Code can also be done inline with backticks: \`foo\` will become `foo`.
 
 ==
 
