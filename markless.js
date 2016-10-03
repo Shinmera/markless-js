@@ -396,10 +396,14 @@ defineSimpleMarklessDirective("instruction", "line", function(p){
         args = args.split(" ");
 
         switch(instruction){
-        case "set": break;
+        case "set":
+            switch(args[0]){
+            case "linemode": lineMode = args[1]; break;
+            default: console.log("Unknown variable",args[0],"cannot set to",args[1]); break;
+            } break;
         case "warn": console.log.apply(console, args); break;
         case "error": throw args; break;
-        case "include": break;
+        case "include": console.log("Cannot include documents. Instruction ignored."); break;
         case "disable-directives":
             for(var i=0; i<args.length; i++){
                 if(!p.globallyDisabledDirectives.find(function(e){return e==args[i]}))
