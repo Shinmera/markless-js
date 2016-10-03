@@ -232,10 +232,9 @@ var MarklessParser = function(){
     self.maybeParseEscape = function(){
         if(self.here() === '\\'){
             c++;
-            if(self.here() !== '\n'){
-                self.parseCharacter();
-                return true;
-            }
+            self.maybeParseEndOfLine()
+                || self.parseCharacter();
+            return true;
         }
         return false;
     }
