@@ -53,8 +53,9 @@ var MarklessParser = function(){
         
         if(directive.isDisabled === undefined){
             directive.isDisabled = function(){
-                return self.globallyDisabledDirectives.find(function(e){return e === directive.name;})
-                    || locallyDisabledDirectives.find(function(a){return a.find(function(e){return e === directive.name;});});
+                return self.globallyDisabledDirectives === true
+                    || self.globallyDisabledDirectives.find(function(e){return e === directive.name;})
+                    || locallyDisabledDirectives.find(function(a){return a === true || a.find(function(e){return e === directive.name;});});
             };
         }
         
@@ -81,9 +82,7 @@ var MarklessParser = function(){
         return Object.values(inlineDirectives);
     }
 
-    self.pushDisabledDirectives = function(directives){
-        if(typeof directives !== "array") throw "List of directives to disable must be an array.";
-        
+    self.pushDisabledDirectives = function(directives){        
         locallyDisabledDirectives.push(directives);
         return locallyDisabledDirectives;
     }
