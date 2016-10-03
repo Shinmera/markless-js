@@ -465,37 +465,6 @@ var defineSurroundingInlineDirective = function(name, tag, recog, inner){
 defineSurroundingInlineDirective("bold", "b", '*');
 defineSurroundingInlineDirective("italic", "i", '/');
 defineSurroundingInlineDirective("underline", "u", '_');
-
-defineSimpleMarklessDirective("strikethrough", "inline", function(p){
-    if(p.here() === '<' && p.next() === '-'){
-        p.advance();
-        var repeats = 0;
-        while(p.here() === '-'){repeats++; p.advance();}
-        
-        var comp = p.startComponent("strike");
-        p.pushDisabledDirectives(["strikethrough"]);
-        while(p.here() !== '\n'){
-            if(p.here() === '-'){
-                var count = 0;
-                var pos = p.c();
-                while(p.at(pos) === '-'){count++;pos++;}
-                if(count == repeats && p.at(pos) === '>'){
-                    for(var i=0; i<repeats+1; i++)p.advance();
-                    break;
-                }
-            }
-            
-            p.maybeParseEscape()
-                || p.maybeParseInlineDirective()
-                || p.parseCharacter();
-        }
-        p.popDisabledDirectives();
-        p.endComponent(comp);
-        return true;
-    }
-    return false;
-});
-
 defineSurroundingInlineDirective("code", "code", '`', true);
 
 defineSimpleMarklessDirective("dash", "inline", function(p){
@@ -506,3 +475,41 @@ defineSimpleMarklessDirective("dash", "inline", function(p){
     }
     return false;
 });
+
+var defineComplexSurroundingInlineDirective = function(name, tag, start, left, right, end, inner){
+    if(inner === undefined) inner = [name];
+    defineSimpleMarklessDirective(name, "inline", function(p){
+        if(p.here() === start && p.next() === left){
+            p.advance();
+            var repeats = 0;
+            while(p.here() === left){repeats++; p.advance();}
+            
+            var comp = p.startComponent(tag);
+            p.pushDisabledDirectives(inner);
+            while(p.here() !== '\n'){
+                if(p.here() === right){
+                    var count = 0;
+                    var pos = p.c();
+                    while(p.at(pos) === right){count++;pos++;}
+                    if(count == repeats && (!end || p.at(pos) === end)){
+                        for(var i=0; i<repeats; i++)p.advance();
+                        if(end)p.advance();
+                        break;
+                    }
+                }
+                
+                p.maybeParseEscape()
+                    || p.maybeParseInlineDirective()
+                    || p.parseCharacter();
+            }
+            p.popDisabledDirectives();
+            p.endComponent(comp);
+            return true;
+        }
+        return false;
+    });
+}
+
+defineComplexSurroundingInlineDirective("strikethrough", "strike", "<", "-", "-", ">");
+defineComplexSurroundingInlineDirective("subtext", "sub", "v", "(", ")");
+defineComplexSurroundingInlineDirective("supertext", "sup", "^", "(", ")");
