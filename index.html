@@ -60,7 +60,7 @@ Code can also be done inline with backticks: \`foo\` will become `foo`.
           timeout.innerHTML = (time/1000).toFixed(4)+"";
       }
       input.addEventListener('input',updateOutput);
-      updateOutput();
+      document.addEventListener('DOMContentLoaded', updateOutput, false);
     </script>
   </body>
 </html>
