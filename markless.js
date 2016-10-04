@@ -190,6 +190,15 @@ var MarklessParser = function(){
     self.hasMore = function(p){
         return (p !== undefined)? p<source.length-1: c<source.length-1;
     }
+
+    self.matches = function(string){
+        var p = c;
+        var i = 0;
+        while(p.here() === string[i]){
+            p++; i++;
+        }
+        return i == string.length;
+    }
     
     // Parsing
     self.reset = function(){
@@ -509,6 +518,6 @@ var defineComplexSurroundingInlineDirective = function(name, tag, start, left, r
     });
 }
 
-defineComplexSurroundingInlineDirective("strikethrough", "strike", "<", "-", "-", ">");
-defineComplexSurroundingInlineDirective("subtext", "sub", "v", "(", ")");
-defineComplexSurroundingInlineDirective("supertext", "sup", "^", "(", ")");
+defineComplexSurroundingInlineDirective("strikethrough", "strike", '<', '-', '-', '>');
+defineComplexSurroundingInlineDirective("subtext", "sub", 'v', '(', ')');
+defineComplexSurroundingInlineDirective("supertext", "sup", '^', '(', ')');

@@ -5,6 +5,7 @@
     <title>Markless JS Parser</title>
     <link rel="stylesheet" type="text/css" href="index.css"/>
     <meta name="viewport" content="width=device-width"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/styles/monokai-sublime.min.css" />
   </head>
   <body>
     <header>
@@ -39,14 +40,25 @@ Code can also be done inline with backticks: \`foo\` will become `foo`.
 ! warn Hi
 ! disable-directives instruction
 ! warn Should not be warned
-; And this doesn't show up at all.</textarea>
+; And this doesn't show up at all.
+
+## To Do
+- paragraph
+- blockquote
+- lists
+- embed
+- footnote
+- URL
+- compound
+- footnote-reference</textarea>
       <section id="output"></section>
     </main>
     <section id="nodes">
+      <div id="timer">Took <time id="time-taken">0</time>s to parse.</div>
       <p>Attempting to implement the <a href="https://github.com/Shinmera/markless">Markless standard</a> v0.1.</p>
-      <p>Missing directives: paragraph, blockquote, lists, embed, footnote, URL, compound, footnote-reference</p>
-      <p>Took <time id="time-taken">0</time>s to parse.</p>
-    </section> 
+    </section>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/highlight.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/languages/lisp.min.js"></script>
     <script type="text/javascript" src="markless.js"></script>
     <script type="text/javascript">
       var input = document.getElementById('input');
@@ -60,7 +72,19 @@ Code can also be done inline with backticks: \`foo\` will become `foo`.
           parser.parseInto(output, input.value);
           var time = performance.now() - start;
           timeout.innerHTML = (time/1000).toFixed(4)+"";
+
+          // Handle highlight crap
+          var codes = document.getElementsByTagName("pre");
+          for(var i=0; i<codes.length; i++){
+              codes[i].setAttribute("class", codes[i].getAttribute("data-lang"));
+              hljs.highlightBlock(codes[i]);
+          }
+
+          // Resize to fit.
+          input.style.height = "auto";
+          input.style.height = Math.max(output.scrollHeight, input.scrollHeight)+"px";
       }
+      
       input.addEventListener('input',updateOutput);
       document.addEventListener('DOMContentLoaded', updateOutput, false);
     </script>
