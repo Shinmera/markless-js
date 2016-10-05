@@ -9,24 +9,6 @@ if(Object.values === undefined){
     };
 }
 
-var MarklessStandardDirectives = {};
-
-var defineMarklessDirective = function(name, type, init){
-    MarklessStandardDirectives[name] = function(){
-        var self = this;
-        init(self);
-        return self;
-    };
-    MarklessStandardDirectives[name].prototype.type = type;
-    MarklessStandardDirectives[name].prototype.name = name;
-}
-
-var defineSimpleMarklessDirective = function(name, type, maybeParse){
-    defineMarklessDirective(name, type, function(self){
-        self.maybeParse = maybeParse;
-    });
-}
-
 var MarklessParser = function(){
     var self = this;
     var dom = window.document;
@@ -50,14 +32,13 @@ var MarklessParser = function(){
         var directive = new prototype();
         if(typeof directive.name !== "string") throw "Directive name must be a string.";
         if(typeof directive.maybeParse !== "function") throw "Directive maybeParse must be a function.";
+        if(typeof directive.init !== "function") throw "Directive init must be a function.";
         
-        if(directive.isDisabled === undefined){
-            directive.isDisabled = function(){
-                return self.globallyDisabledDirectives === true
-                    || self.globallyDisabledDirectives.find(function(e){return e === directive.name;})
-                    || locallyDisabledDirectives.find(function(a){return a === true || a.find(function(e){return e === directive.name;});});
-            };
-        }
+        directive.isDisabled = function(){
+            return self.globallyDisabledDirectives === true
+                || self.globallyDisabledDirectives.find(function(e){return e === directive.name;})
+                || locallyDisabledDirectives.find(function(a){return a === true || a.find(function(e){return e === directive.name;});});
+        };
         
         return directive;
     }
@@ -206,6 +187,8 @@ var MarklessParser = function(){
         labels = {};
         lineMode = "unescaped";
         document = dom.createElement("article");
+        for(var i in lineDirectives){lineDirectives[i].init();}
+        for(var i in inlineDirectives){inlineDirectives[i].init();}
         return document;
     }
     
@@ -220,8 +203,9 @@ var MarklessParser = function(){
 
     self.parse = function(input){
         if(typeof input !== "string") throw "Input to parse must be a string.";
+        
         var root = document;
-        source = input;
+        source = input;        
         while(c<source.length){
             self.parseOne();
         }
@@ -302,11 +286,26 @@ var MarklessParser = function(){
     
     return self;
 }
-    
-defineSimpleMarklessDirective("unknown", "line", function(p){
-    return false;
-});
 
+var MarklessStandardDirectives = {};
+
+var defineMarklessDirective = function(name, type, init){
+    MarklessStandardDirectives[name] = function(){
+        var self = this;
+        init(self);
+        return self;
+    };
+    MarklessStandardDirectives[name].prototype.type = type;
+    MarklessStandardDirectives[name].prototype.name = name;
+}
+
+var defineSimpleMarklessDirective = function(name, type, maybeParse){
+    defineMarklessDirective(name, type, function(self){
+        self.maybeParse = maybeParse;
+        self.init = function(){}
+    });
+}
+    
 defineSimpleMarklessDirective("header", "line", function(p){
     if(p.here() === '#'
        && (p.next() === '#' || p.next() === ' ')){
@@ -429,6 +428,53 @@ defineSimpleMarklessDirective("instruction", "line", function(p){
         return true;
     }
     return false;
+});
+
+defineMarklessDirective("blockquote", "line", function(self){
+    var component = undefined;
+    var source = undefined;
+    
+    self.init = function(){
+        component = undefined;
+        source = undefined;
+    }
+    
+    self.maybeParse = function(p){
+        if(p.here() === '~' && p.next() === ' '){
+            p.advance(2);
+            source = "";
+            while(p.here() !== '\n'){
+                source = source + p.consume();
+            }
+            p.advance();
+            return true;
+        }else if(p.here() === '|' && p.next() === ' '){
+            if(component === undefined){
+                component = p.startComponent("blockquote");
+            }
+
+            p.advance(2);
+            while(p.here() !== '\n'){
+                p.maybeParseEscape()
+                    || p.maybeParseLineDirective()
+                    || p.maybeParseInlineDirective()
+                    || p.parseCharacter();
+            }
+            
+            return true;
+        }else if(component !== undefined){
+            if(source !== undefined){
+                p.startComponent("footer");
+                p.insertString(" - ");
+                p.startComponent("cite");
+                p.insertString(source);
+            }
+            
+            p.endComponent(component);
+            self.init();
+        }
+        return false;
+    };
 });
 
 defineSimpleMarklessDirective("comment", "line", function(p){
