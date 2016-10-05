@@ -23,7 +23,7 @@ body>main{
 #input{
     display: inline-block;
     flex-grow: 1;
-    box-sizing: border-box;
+    box-sizing: content-box;
     width: 50%;
     overflow: hidden;
 }
@@ -58,4 +58,11 @@ body>main{
 
 #timer{
     float: right;
+}
+
+#error{
+    background: #CC0000;
+    color: #FFFFFF;
+    font-weight: bold;
+    padding: 5px;
 }

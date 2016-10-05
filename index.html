@@ -8,9 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/styles/monokai-sublime.min.css" />
   </head>
   <body>
-    <header>
-      <h1>Markless Live Parser</h1>
-    </header>
     <main>
       <textarea id="input" autofocus># Markless
 This is a demo page to illustrate the workings of the JavaScript Markless implementation.
@@ -26,7 +23,13 @@ In order to avoid clashing with hyphenation --or dashes-- strikethrough is <-unb
 
 You can also make supertext^(yay) and subtextv(oh boy). Simply surround the text with parens and prefix it with ^ for supertext or v for subtext.
 
-## Code
+## Blocks
+~ George Lucas
+| It's gonna be great.
+
+| That's gonna be great.
+
+### Code
 :: common-lisp
 ;; Hah!
 (defun !(!)(if(<= ! 1)!(* !(!(1- !)))))
@@ -54,22 +57,29 @@ Code can also be done inline with backticks: \`foo\` will become `foo`.
       <section id="output"></section>
     </main>
     <section id="nodes">
+      <div id="error"></div>
       <div id="timer">Took <time id="time-taken">0</time>s to parse.</div>
-      <p>Attempting to implement the <a href="https://github.com/Shinmera/markless">Markless standard</a> v0.1.</p>
+      <span>Attempting to implement the <a href="https://github.com/Shinmera/markless">Markless standard</a> v0.1.</span>
     </section>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/highlight.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/languages/lisp.min.js"></script>
     <script type="text/javascript" src="markless.js"></script>
     <script type="text/javascript">
-      var input = document.getElementById('input');
-      var output = document.getElementById('output');
-      var timeout = document.getElementById('time-taken');
+      var input = document.getElementById("input");
+      var output = document.getElementById("output");
+      var timeout = document.getElementById("time-taken");
+      var error = document.getElementById("error");
       var parser = new MarklessParser();
       
       function updateOutput(){
+          error.innerHTML = "";
           parser.globallyDisabledDirectives = [];
           var start = performance.now();
-          parser.parseInto(output, input.value);
+          try{
+              parser.parseInto(output, input.value);
+          }catch(err){
+              error.innerHTML = err+"";
+          }
           var time = performance.now() - start;
           timeout.innerHTML = (time/1000).toFixed(4)+"";
 
