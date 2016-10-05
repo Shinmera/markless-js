@@ -249,7 +249,8 @@ var MarklessParser = function(){
     }
 
     self.maybeParseLineDirective = function(){
-        if(c==0 || source[c-1] === '\n' || document.childNodes.length === 0){
+        if((c==0 || source[c-1] === '\n' || document.childNodes.length === 0)
+           && stringBuffer.length === 0){
             for(var i in lineDirectives){
                 if(!lineDirectives[i].isDisabled()
                    && lineDirectives[i].maybeParse(self)){
