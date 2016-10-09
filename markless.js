@@ -210,7 +210,7 @@ var MarklessParser = function(){
         source = input;
         start = (s === undefined)? 0 : s;
         end   = (e === undefined)? input.length : e;
-        while(self.hasMore()){
+        while(c < end){
             self.parseOne();
         }
         self.endComponent(root);
