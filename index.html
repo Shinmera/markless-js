@@ -23,18 +23,45 @@ In order to avoid clashing with hyphenation --or dashes-- strikethrough is <-unb
 
 You can also make supertext^(yay) and subtextv(oh boy). Simply surround the text with parens and prefix it with ^ for supertext or v for subtext.
 
+Code can also be done inline with backticks: \`foo\` will become `foo`.
+
+## Compound Markup
+This is in red(in red). And "this here"(to https://example.com) is a link to example.com.
+
+But now, let's get(in big) huge(in large)! But here's a "pepperoni secret"(in spoiler).
+
 ## Blocks
 ~ George Lucas
 | It's gonna be great.
 | That's gonna be great.
 
-### Code
+| And then he was like
+| | Oh. mygod. How dare you.
+| and that's just like, not okay?
+
 :: common-lisp
 ;; Hah!
 (defun !(!)(if(<= ! 1)!(* !(!(1- !)))))
 ::
 
-Code can also be done inline with backticks: \`foo\` will become `foo`.
+| ### Recursive blocks
+| ::
+| code();
+| ::
+| | | | Oh my.
+
+1.Indeed.
+2.This is a problem[1]
+3.And thus we need to
+  test it extensively. Yes my boy.
+5.Skip a number, why not.
+6.| mix these bad boys
+6.| ### Mix 'em good!
+
+[1] In that it is hard to implement.
+
+Look at this cat http://i3.kym-cdn.com/entries/icons/facebook/000/019/976/smug_knife_cat.jpg :
+[image http://i3.kym-cdn.com/entries/icons/facebook/000/019/976/smug_knife_cat.jpg]
 
 ==
 
