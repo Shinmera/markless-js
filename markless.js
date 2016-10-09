@@ -14,6 +14,8 @@ var MarklessParser = function(){
     var dom = window.document;
     
     var c = 0;
+    var start = 0;
+    var end = 0;
     var labels = {};
     var source = "";
     var stringBuffer = "";
@@ -125,15 +127,15 @@ var MarklessParser = function(){
         if(newPos !== undefined){
             c = newPos;
         }
-        if(c<0) c = 0;
-        else if(source.length<c) c = source.length;
+        if(c<start) c = start;
+        else if(end<c) c = end;
         return c;
     }
 
     self.at = function(pos){
         pos = (pos === undefined)? c : pos;
-        if(pos<0) return '';
-        else if(source.length<=pos) return '\n';
+        if(pos<start) return '';
+        else if(end<=pos) return '\n';
         else return source[pos] ;
     }
     
@@ -151,11 +153,11 @@ var MarklessParser = function(){
 
     self.advance = function(n){
         if(n === undefined) n = 1;
-        return (c<source.length)? c+=n : c;
+        return (c<end)? c+=n : c;
     }
 
     self.backtrack = function(){
-        return (0<c)? c-- : c;
+        return (start<c)? c-- : c;
     }
 
     self.consume = function(){
@@ -165,11 +167,11 @@ var MarklessParser = function(){
     }
 
     self.length = function(){
-        return source.length;
+        return end;
     }
 
     self.hasMore = function(p){
-        return (p !== undefined)? p<source.length-1: c<source.length-1;
+        return (p !== undefined)? p<end-1: c<end-1;
     }
 
     self.matches = function(string){
@@ -183,7 +185,7 @@ var MarklessParser = function(){
     
     // Parsing
     self.reset = function(){
-        c = 0;
+        c = start;
         labels = {};
         lineMode = "unescaped";
         document = dom.createElement("article");
@@ -192,24 +194,26 @@ var MarklessParser = function(){
         return document;
     }
     
-    self.parseInto = function(target, input){
+    self.parseInto = function(target, input, s, e){
         if(typeof target !== "object") throw "Target to parse into must be a DOM object.";
         
         target.innerHTML = "";
         self.reset();
         document = target;
-        return self.parse(input);
+        return self.parse(input, s, e);
     }
 
-    self.parse = function(input){
+    self.parse = function(input, s, e){
         if(typeof input !== "string") throw "Input to parse must be a string.";
         
         var root = document;
-        source = input;        
-        while(c<source.length){
+        source = input;
+        start = (s === undefined)? 0 : s;
+        end   = (e === undefined)? input.length : e;
+        while(self.hasMore()){
             self.parseOne();
         }
-        self.endComponent(document);
+        self.endComponent(root);
         return document;
     }
 
